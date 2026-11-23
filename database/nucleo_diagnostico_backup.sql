@@ -2,8 +2,6 @@
 -- PostgreSQL database dump
 --
 
-\restrict cGVx5ZCLEftbRG7ZkytKDaEQAEqJkXlNMuNwZjIeoc5Z6kC0tGhEbjMt8bXeoV1
-
 -- Dumped from database version 17.11
 -- Dumped by pg_dump version 17.11
 
@@ -158,5 +156,4 @@ ALTER TABLE ONLY public.paciente
 -- PostgreSQL database dump complete
 --
 
-\unrestrict cGVx5ZCLEftbRG7ZkytKDaEQAEqJkXlNMuNwZjIeoc5Z6kC0tGhEbjMt8bXeoV1
 
