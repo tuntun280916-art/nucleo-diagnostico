@@ -348,37 +348,56 @@ class Dashboard:
         ).pack(pady=8)
 
 
+
+        # =====================================
         # MÓDULO DE CITAS
+        # =====================================
 
         card_citas = tk.Frame(
             content,
             bg=CARD_BG,
+            relief="flat",
+            bd=1,
             highlightbackground=BORDER_COLOR,
             highlightthickness=1
         )
 
         card_citas.pack(
             anchor="w",
+            padx=(0, 30),
             pady=(25, 0),
             ipadx=30,
-            ipady=20
+            ipady=25
         )
 
         tk.Label(
             card_citas,
-            text="Módulo de Citas",
+            text="Módulo Citas",
             font=("Segoe UI", 16, "bold"),
             bg=CARD_BG,
             fg=PRIMARY_COLOR
-        ).pack(pady=(10, 15))
+        ).pack(anchor="w", pady=(5, 15))
 
         tk.Button(
             card_citas,
-            text="📅 Registrar Nueva Cita",
+            text="➕ Registrar Cita",
             font=("Segoe UI", 11),
             bg=PRIMARY_COLOR,
             fg="white",
             relief="flat",
-            width=26,
-            command=self.mostrar_formulario_cita
-        ).pack(pady=10)
+            width=24,
+            cursor="hand2",
+            command=lambda: self.mostrar_formulario_cita()
+        ).pack(pady=8)
+
+        tk.Button(
+            card_citas,
+            text="📋 Consultar Citas",
+            font=("Segoe UI", 11),
+            bg="#475569",
+            fg="white",
+            relief="flat",
+            width=24,
+            cursor="hand2",
+            command=lambda: self.mostrar_consultas_cita()
+        ).pack(pady=8)

@@ -17,6 +17,7 @@ from pacientes.consultas import ConsultasPaciente
 
 
 from citas.registro import RegistroCita
+from citas.consultas import ConsultasCita
 
 class AppSistema(
     Login,
@@ -28,6 +29,7 @@ class AppSistema(
     RegistroPaciente,
     ConsultasPaciente,
     RegistroCita,
+    ConsultasCita,
     tk.Tk
 ):
 

@@ -6,7 +6,7 @@ from tkcalendar import Calendar
 import unicodedata
 
 from config.conexion import conectar_bd
-from citas import horarios as reglas_horarios
+from citas.horarios import generar_horarios_para_fecha
 
 from gui.estilos import (
     BG_COLOR,
@@ -26,7 +26,7 @@ class RegistroCita:
 
     def normalizar_busqueda_cita(self, texto):
 
-        texto = unicodedata.normalize("NFD", texto)
+        texto = unicodedata.normalize("NFD", str(texto))
 
         return "".join(
             letra for letra in texto
@@ -45,6 +45,7 @@ class RegistroCita:
             return None
 
         try:
+
             with conexion.cursor() as cursor:
 
                 cursor.execute("""
@@ -75,25 +76,16 @@ class RegistroCita:
             return None
 
         finally:
+
             conexion.close()
 
     # =============================================
-    # GENERAR HORARIOS DE ATENCIÓN
+    # HORARIOS DE ATENCIÓN
     # =============================================
 
     def horarios_validos_cita(self, fecha):
 
-        # Compatible con ambas versiones de horarios.py
-        funcion = getattr(
-            reglas_horarios,
-            "generar_horarios_para_fecha",
-            None
-        )
-
-        if funcion is None:
-            funcion = reglas_horarios.generar_horarios
-
-        return funcion(fecha)
+        return generar_horarios_para_fecha(fecha)
 
     # =============================================
     # BUSCADOR INTELIGENTE REUTILIZABLE
@@ -142,7 +134,8 @@ class RegistroCita:
             fg=TEXT_MUTED
         ).pack(anchor="w", pady=(5, 0))
 
-        # Panel de sugerencias
+        # Contenedor de sugerencias
+
         sugerencias = tk.Frame(
             marco,
             bg="white",
@@ -184,7 +177,10 @@ class RegistroCita:
         coincidencias = []
         seleccionando = False
 
-        # Buscar mientras el usuario escribe
+        # =========================================
+        # BUSCAR MIENTRAS SE ESCRIBE
+        # =========================================
+
         def buscar(*args):
 
             nonlocal coincidencias
@@ -221,7 +217,10 @@ class RegistroCita:
 
                 else:
 
-                    coincide = texto in nombre_normalizado
+                    coincide = all(
+                        palabra in nombre_normalizado
+                        for palabra in texto.split()
+                    )
 
                 if coincide:
 
@@ -256,7 +255,10 @@ class RegistroCita:
                 pady=(3, 0)
             )
 
-        # Seleccionar una sugerencia
+        # =========================================
+        # SELECCIONAR UNA SUGERENCIA
+        # =========================================
+
         def seleccionar(event=None):
 
             nonlocal seleccionando
@@ -288,10 +290,13 @@ class RegistroCita:
 
             al_seleccionar(identificador)
 
-        # Navegar con el teclado
+        # Navegación mediante teclado
+
         def bajar(event):
 
             if coincidencias:
+
+                sugerencias.pack(fill="x", pady=(3, 0))
 
                 lista.focus_set()
                 lista.selection_clear(0, tk.END)
@@ -306,6 +311,7 @@ class RegistroCita:
 
                 lista.selection_clear(0, tk.END)
                 lista.selection_set(0)
+
                 seleccionar()
 
             return "break"
@@ -313,6 +319,7 @@ class RegistroCita:
         def cerrar_sugerencias(event):
 
             sugerencias.pack_forget()
+            buscador.focus_set()
 
             return "break"
 
@@ -320,7 +327,10 @@ class RegistroCita:
 
             direccion = -1 if event.delta > 0 else 1
 
-            lista.yview_scroll(direccion, "units")
+            lista.yview_scroll(
+                direccion,
+                "units"
+            )
 
             return "break"
 
@@ -350,6 +360,9 @@ class RegistroCita:
 
         pacientes, medicos = catalogos
 
+        nombres_pacientes = dict(pacientes)
+        nombres_medicos = dict(medicos)
+
         self.limpiar_contenedor()
 
         self.crear_barra_superior(
@@ -361,14 +374,12 @@ class RegistroCita:
             pady=25
         )
 
-        # Estado de la cita actual
-        estado = {
+        estado: dict[str, int | date | str | None] = {
             "paciente": None,
             "medico": None,
             "fecha": None,
             "hora": None
         }
-
         botones_horarios = {}
 
         # =========================================
@@ -566,8 +577,23 @@ class RegistroCita:
 
         frame_horarios.pack(anchor="w")
 
+        lbl_estado_agenda = tk.Label(
+            derecha,
+            text="",
+            font=("Segoe UI", 10),
+            bg=CARD_BG,
+            fg=TEXT_MUTED,
+            wraplength=400,
+            justify="left"
+        )
+
+        lbl_estado_agenda.pack(
+            anchor="w",
+            pady=(15, 0)
+        )
+
         # =========================================
-        # FUNCIONES INTERNAS DEL FORMULARIO
+        # ACTUALIZAR BOTÓN REGISTRAR
         # =========================================
 
         def actualizar_boton():
@@ -587,6 +613,10 @@ class RegistroCita:
                 bg="#10b981" if completo else "#94a3b8"
             )
 
+        # =========================================
+        # LIMPIAR AGENDA
+        # =========================================
+
         def limpiar_agenda():
 
             estado["fecha"] = None
@@ -600,6 +630,8 @@ class RegistroCita:
                 text="No seleccionada"
             )
 
+            lbl_estado_agenda.config(text="")
+
             for widget in frame_horarios.winfo_children():
                 widget.destroy()
 
@@ -607,17 +639,39 @@ class RegistroCita:
 
             actualizar_boton()
 
+        # =========================================
+        # CAMBIOS DE PACIENTE
+        # =========================================
+
         def paciente_modificado():
+
+            habia_paciente = estado["paciente"] is not None
 
             estado["paciente"] = None
 
-            actualizar_boton()
+            if habia_paciente and estado["medico"] is not None:
+
+                actualizar_horarios()
+
+            else:
+
+                actualizar_boton()
 
         def paciente_seleccionado(identificador):
 
             estado["paciente"] = identificador
 
-            actualizar_boton()
+            if estado["medico"] is not None:
+
+                actualizar_horarios()
+
+            else:
+
+                actualizar_boton()
+
+        # =========================================
+        # CAMBIOS DE MÉDICO
+        # =========================================
 
         def medico_modificado():
 
@@ -625,15 +679,9 @@ class RegistroCita:
 
             limpiar_agenda()
 
-            tk.Label(
-                frame_horarios,
-                text="Selecciona un médico para consultar su agenda.",
-                font=("Segoe UI", 11),
-                bg=CARD_BG,
-                fg=TEXT_MUTED,
-                wraplength=350,
-                justify="left"
-            ).pack(anchor="w")
+            lbl_estado_agenda.config(
+                text="Selecciona un médico para consultar su agenda."
+            )
 
         def medico_seleccionado(identificador):
 
@@ -671,6 +719,7 @@ class RegistroCita:
 
         # =========================================
         # CONSULTAR DISPONIBILIDAD
+        # MÉDICO Y PACIENTE
         # =========================================
 
         def actualizar_horarios(event=None):
@@ -679,13 +728,10 @@ class RegistroCita:
 
             if estado["medico"] is None:
 
-                tk.Label(
-                    frame_horarios,
+                lbl_estado_agenda.config(
                     text="Primero selecciona un médico.",
-                    font=("Segoe UI", 11),
-                    bg=CARD_BG,
                     fg=TEXT_MUTED
-                ).pack(anchor="w")
+                )
 
                 return
 
@@ -695,19 +741,22 @@ class RegistroCita:
 
             if not horarios:
 
-                tk.Label(
-                    frame_horarios,
+                lbl_estado_agenda.config(
                     text="Domingo: no hay atención médica.",
-                    font=("Segoe UI", 11, "bold"),
-                    bg=CARD_BG,
                     fg="#dc2626"
-                ).pack(anchor="w")
+                )
 
                 return
 
             conexion = conectar_bd()
 
             if conexion is None:
+
+                lbl_estado_agenda.config(
+                    text="No se pudo consultar la disponibilidad.",
+                    fg="#dc2626"
+                )
+
                 return
 
             try:
@@ -715,19 +764,23 @@ class RegistroCita:
                 with conexion.cursor() as cursor:
 
                     cursor.execute("""
-                        SELECT hora
+                        SELECT
+                            hora,
+                            id_medico,
+                            id_paciente
                         FROM public.cita
-                        WHERE id_medico = %s
-                          AND fecha = %s;
+                        WHERE fecha = %s
+                          AND (
+                              id_medico = %s
+                              OR id_paciente = %s
+                          );
                     """, (
+                        fecha,
                         estado["medico"],
-                        fecha
+                        estado["paciente"]
                     ))
 
-                    ocupadas = {
-                        fila[0].strftime("%H:%M")
-                        for fila in cursor.fetchall()
-                    }
+                    registros = cursor.fetchall()
 
             except Exception as error:
 
@@ -742,13 +795,36 @@ class RegistroCita:
 
                 conexion.close()
 
+            # Horarios ocupados del médico
+
+            ocupadas_medico = {
+                registro[0].strftime("%H:%M")
+                for registro in registros
+                if registro[1] == estado["medico"]
+            }
+
+            # Horarios ocupados del paciente
+
+            ocupadas_paciente = {
+                registro[0].strftime("%H:%M")
+                for registro in registros
+                if registro[2] == estado["paciente"]
+            }
+
+            # Unión de ambos conjuntos
+
+            ocupadas = ocupadas_medico | ocupadas_paciente
+
             estado["fecha"] = fecha
 
             lbl_fecha.config(
                 text=fecha.strftime("%d/%m/%Y")
             )
 
-            # Crear los botones de horarios
+            # =====================================
+            # CREAR BOTONES DE HORARIOS
+            # =====================================
+
             for indice, hora in enumerate(horarios):
 
                 disponible = hora not in ocupadas
@@ -795,6 +871,38 @@ class RegistroCita:
 
                     botones_horarios[hora] = boton
 
+            # Mostrar información de disponibilidad
+
+            mensajes = []
+
+            if ocupadas_medico:
+
+                mensajes.append(
+                    "Horarios ocupados del médico: "
+                    + ", ".join(sorted(ocupadas_medico))
+                )
+
+            if ocupadas_paciente:
+
+                mensajes.append(
+                    "El paciente ya tiene citas a las: "
+                    + ", ".join(sorted(ocupadas_paciente))
+                )
+
+            if mensajes:
+
+                lbl_estado_agenda.config(
+                    text="\n\n".join(mensajes),
+                    fg="#b91c1c"
+                )
+
+            else:
+
+                lbl_estado_agenda.config(
+                    text="Todos los horarios de atención están disponibles.",
+                    fg="#166534"
+                )
+
             actualizar_boton()
 
         # =========================================
@@ -824,6 +932,16 @@ class RegistroCita:
             id_medico = estado["medico"]
             fecha = estado["fecha"]
             hora = estado["hora"]
+            if not isinstance(fecha, date) or not isinstance(hora, str):
+
+                messagebox.showwarning(
+                    "Datos inválidos",
+                    "Selecciona una fecha y hora válidas."
+                )
+
+                return
+
+             #Validar horario de atencion
 
             if hora not in self.horarios_validos_cita(fecha):
 
@@ -834,9 +952,15 @@ class RegistroCita:
 
                 return
 
+            # =====================================
+            # CONFIRMACIÓN DE LA CITA
+            # =====================================
+
             confirmar = messagebox.askyesno(
                 "Confirmar cita",
-                f"¿Deseas registrar la cita?\n\n"
+                f"¿Deseas registrar la siguiente cita?\n\n"
+                f"Paciente: {nombres_pacientes[id_paciente]}\n\n"
+                f"Médico: {nombres_medicos[id_medico]}\n\n"
                 f"Fecha: {fecha.strftime('%d/%m/%Y')}\n"
                 f"Hora: {hora}"
             )
@@ -849,40 +973,87 @@ class RegistroCita:
             if conexion is None:
                 return
 
-            ocupado = False
+            motivo = None
             id_cita = None
 
             try:
 
+                conexion.autocommit = False
+
                 with conexion.cursor() as cursor:
 
-                    # Evitar registros simultáneos
-                    # en el mismo horario.
+                    # Bloquear escrituras simultáneas
+                    # durante la validación y el registro.
+
                     cursor.execute("""
                         LOCK TABLE public.cita
                         IN SHARE ROW EXCLUSIVE MODE;
                     """)
 
-                    # Comprobar nuevamente disponibilidad
+                    # =================================
+                    # VALIDAR DISPONIBILIDAD DEL MÉDICO
+                    # Y DEL PACIENTE
+                    # =================================
+
                     cursor.execute("""
-                        SELECT 1
+                        SELECT id_medico, id_paciente
                         FROM public.cita
-                        WHERE id_medico = %s
-                          AND fecha = %s
-                          AND hora = %s;
+                        WHERE fecha = %s
+                          AND hora = %s
+                          AND (
+                              id_medico = %s
+                              OR id_paciente = %s
+                          );
                     """, (
-                        id_medico,
                         fecha,
-                        time.fromisoformat(hora)
+                        time.fromisoformat(hora),
+                        id_medico,
+                        id_paciente
                     ))
 
-                    if cursor.fetchone():
+                    conflictos = cursor.fetchall()
 
-                        ocupado = True
+                    if conflictos:
+
+                        paciente_ocupado = any(
+                            fila[1] == id_paciente
+                            for fila in conflictos
+                        )
+
+                        medico_ocupado = any(
+                            fila[0] == id_medico
+                            for fila in conflictos
+                        )
+
+                        if paciente_ocupado and medico_ocupado:
+
+                            motivo = (
+                                "El paciente y el médico "
+                                "ya tienen una cita "
+                                "en ese horario."
+                            )
+
+                        elif paciente_ocupado:
+
+                            motivo = (
+                                "El paciente ya tiene una cita "
+                                "registrada en ese horario, "
+                                "aunque sea con otro médico."
+                            )
+
+                        else:
+
+                            motivo = (
+                                "El médico ya tiene una cita "
+                                "registrada en ese horario."
+                            )
 
                     else:
 
-                        # PostgreSQL genera el ID automáticamente
+                        # =============================
+                        # INSERTAR NUEVA CITA
+                        # =============================
+
                         cursor.execute("""
                             INSERT INTO public.cita (
                                 id_paciente,
@@ -901,9 +1072,12 @@ class RegistroCita:
 
                         id_cita = cursor.fetchone()[0]
 
-                if ocupado:
+                if motivo is not None:
+
                     conexion.rollback()
+
                 else:
+
                     conexion.commit()
 
             except Exception as error:
@@ -921,29 +1095,38 @@ class RegistroCita:
 
                 conexion.close()
 
-            if ocupado:
+            # =====================================
+            # MOSTRAR CONFLICTO DE HORARIO
+            # =====================================
+
+            if motivo is not None:
 
                 messagebox.showwarning(
                     "Horario ocupado",
-                    "Ese horario ya fue reservado.\n"
-                    "Selecciona otro horario."
+                    motivo + "\n\nSelecciona otro horario."
                 )
 
                 actualizar_horarios()
 
                 return
 
+            # =====================================
+            # REGISTRO EXITOSO
+            # =====================================
+
             messagebox.showinfo(
                 "Cita registrada",
                 f"La cita se registró correctamente.\n\n"
-                f"ID de cita: {id_cita}\n"
+                f"ID de cita: {id_cita}\n\n"
+                f"Paciente: {nombres_pacientes[id_paciente]}\n\n"
+                f"Médico: {nombres_medicos[id_medico]}\n\n"
                 f"Fecha: {fecha.strftime('%d/%m/%Y')}\n"
                 f"Hora: {hora}"
             )
 
-            # Actualizar agenda para mostrar
-            # en rojo el horario recién reservado.
-            actualizar_horarios()
+            # Regresar únicamente después de guardar
+
+            self.mostrar_dashboard()
 
         # =========================================
         # CONSTRUIR BUSCADORES
@@ -1049,11 +1232,15 @@ class RegistroCita:
 
         boton_registrar.pack(fill="x")
 
-        # Actualizar al cambiar de fecha
+        # =========================================
+        # EVENTOS DEL CALENDARIO
+        # =========================================
+
         calendario.bind(
             "<<CalendarSelected>>",
             actualizar_horarios
         )
 
-        # Estado inicial de la agenda
+        # Estado inicial del formulario
+
         actualizar_horarios()
