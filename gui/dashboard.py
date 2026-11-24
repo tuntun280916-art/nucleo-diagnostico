@@ -75,8 +75,69 @@ class Dashboard:
 
         self.crear_barra_superior(self.main_container)
 
-        content = tk.Frame(
+        # =====================================
+        # ÁREA CON SCROLL VERTICAL
+        # =====================================
+
+        canvas = tk.Canvas(
             self.main_container,
+            bg=BG_COLOR,
+            highlightthickness=0
+        )
+        canvas.pack(side="left", fill="both", expand=True)
+
+        scrollbar = tk.Scrollbar(
+            self.main_container,
+            orient="vertical",
+            command=canvas.yview
+        )
+        scrollbar.pack(side="right", fill="y")
+
+        canvas.configure(yscrollcommand=scrollbar.set)
+
+        # Frame que contendrá todos los elementos
+        contenedor_scroll = tk.Frame(canvas, bg=BG_COLOR)
+
+        ventana_canvas = canvas.create_window(
+            (0, 0),
+            window=contenedor_scroll,
+            anchor="nw"
+        )
+
+        # Actualizar el área desplazable
+        def actualizar_scroll(event):
+            canvas.configure(scrollregion=canvas.bbox("all"))
+
+        contenedor_scroll.bind("<Configure>", actualizar_scroll)
+
+        # Adaptar el contenido al ancho del Canvas
+        def ajustar_ancho(event):
+            canvas.itemconfigure(
+                ventana_canvas,
+                width=event.width
+            )
+
+        canvas.bind("<Configure>", ajustar_ancho)
+
+        # Movimiento con la rueda del mouse
+        # =====================================
+        # DESPLAZAMIENTO CON RUEDA DEL MOUSE
+        # =====================================
+
+        def mover_rueda(event):
+            if canvas.winfo_exists():
+                desplazamiento = -1 if event.delta > 0 else 1
+                canvas.yview_scroll(desplazamiento * 3, "units")
+
+        # Habilitar desplazamiento en todo el dashboard
+        canvas.bind_all("<MouseWheel>", mover_rueda)
+
+        # =====================================
+        # CONTENIDO ORIGINAL DEL DASHBOARD
+        # =====================================
+
+        content = tk.Frame(
+            contenedor_scroll,
             bg=BG_COLOR
         )
         content.pack(
@@ -285,3 +346,39 @@ class Dashboard:
             cursor="hand2",
             command=lambda: self.mostrar_consultas_paciente()
         ).pack(pady=8)
+
+
+        # MÓDULO DE CITAS
+
+        card_citas = tk.Frame(
+            content,
+            bg=CARD_BG,
+            highlightbackground=BORDER_COLOR,
+            highlightthickness=1
+        )
+
+        card_citas.pack(
+            anchor="w",
+            pady=(25, 0),
+            ipadx=30,
+            ipady=20
+        )
+
+        tk.Label(
+            card_citas,
+            text="Módulo de Citas",
+            font=("Segoe UI", 16, "bold"),
+            bg=CARD_BG,
+            fg=PRIMARY_COLOR
+        ).pack(pady=(10, 15))
+
+        tk.Button(
+            card_citas,
+            text="📅 Registrar Nueva Cita",
+            font=("Segoe UI", 11),
+            bg=PRIMARY_COLOR,
+            fg="white",
+            relief="flat",
+            width=26,
+            command=self.mostrar_formulario_cita
+        ).pack(pady=10)
