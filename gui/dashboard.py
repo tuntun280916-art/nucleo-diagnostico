@@ -119,7 +119,6 @@ class Dashboard:
 
         canvas.bind("<Configure>", ajustar_ancho)
 
-        # Movimiento con la rueda del mouse
         # =====================================
         # DESPLAZAMIENTO CON RUEDA DEL MOUSE
         # =====================================
@@ -129,7 +128,6 @@ class Dashboard:
                 desplazamiento = -1 if event.delta > 0 else 1
                 canvas.yview_scroll(desplazamiento * 3, "units")
 
-        # Habilitar desplazamiento en todo el dashboard
         canvas.bind_all("<MouseWheel>", mover_rueda)
 
         # =====================================
@@ -167,14 +165,11 @@ class Dashboard:
         ).pack(anchor="w", pady=(0, 8))
 
         if self.rol_actual == "admin":
-
             texto = (
                 "Seleccione una opción de gestión para "
                 "continuar en el sistema."
             )
-
         else:
-
             texto = (
                 "Seleccione una opción para gestionar "
                 "los registros de pacientes."
@@ -347,14 +342,21 @@ class Dashboard:
             command=lambda: self.mostrar_consultas_paciente()
         ).pack(pady=8)
 
-
-
         # =====================================
-        # MÓDULO DE CITAS
+        # SEGUNDA FILA: CITAS Y MEDICAMENTOS
         # =====================================
+
+        fila_secundaria = tk.Frame(
+            content,
+            bg=BG_COLOR
+        )
+        fila_secundaria.pack(
+            anchor="w",
+            pady=(25, 0)
+        )
 
         card_citas = tk.Frame(
-            content,
+            fila_secundaria,
             bg=CARD_BG,
             relief="flat",
             bd=1,
@@ -363,9 +365,8 @@ class Dashboard:
         )
 
         card_citas.pack(
-            anchor="w",
+            side="left",
             padx=(0, 30),
-            pady=(25, 0),
             ipadx=30,
             ipady=25
         )
@@ -400,4 +401,52 @@ class Dashboard:
             width=24,
             cursor="hand2",
             command=lambda: self.mostrar_consultas_cita()
+        ).pack(pady=8)
+
+        card_meds = tk.Frame(
+            fila_secundaria,
+            bg=CARD_BG,
+            relief="flat",
+            bd=1,
+            highlightbackground=BORDER_COLOR,
+            highlightthickness=1
+        )
+
+        card_meds.pack(
+            side="left",
+            padx=(0, 30),
+            ipadx=30,
+            ipady=25
+        )
+
+        tk.Label(
+            card_meds,
+            text="Módulo Medicamentos",
+            font=("Segoe UI", 16, "bold"),
+            bg=CARD_BG,
+            fg=PRIMARY_COLOR
+        ).pack(anchor="w", pady=(5, 15))
+
+        tk.Button(
+            card_meds,
+            text="➕ Registrar Medicamento",
+            font=("Segoe UI", 11),
+            bg=PRIMARY_COLOR,
+            fg="white",
+            relief="flat",
+            width=24,
+            cursor="hand2",
+            command=lambda: self.mostrar_formulario_medicamento()
+        ).pack(pady=8)
+
+        tk.Button(
+            card_meds,
+            text="📋 Consultar Medicamentos",
+            font=("Segoe UI", 11),
+            bg="#475569",
+            fg="white",
+            relief="flat",
+            width=24,
+            cursor="hand2",
+            command=lambda: self.mostrar_consultas_medicamento()
         ).pack(pady=8)

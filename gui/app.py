@@ -15,9 +15,12 @@ from medicos.consultas import ConsultasMedico
 from pacientes.registro import RegistroPaciente
 from pacientes.consultas import ConsultasPaciente
 
-
 from citas.registro import RegistroCita
 from citas.consultas import ConsultasCita
+
+from medicamentos.registro import RegistroMedicamento
+from medicamentos.consultas import ConsultasMedicamento
+
 
 class AppSistema(
     Login,
@@ -30,6 +33,8 @@ class AppSistema(
     ConsultasPaciente,
     RegistroCita,
     ConsultasCita,
+    RegistroMedicamento,
+    ConsultasMedicamento,
     tk.Tk
 ):
 
@@ -58,7 +63,6 @@ class AppSistema(
         self.mostrar_login()
 
     def limpiar_contenedor(self):
-
 
         self.unbind_all("<MouseWheel>")
 
