@@ -9,12 +9,12 @@ def es_dia_laboral(fecha):
     return fecha.weekday() != 6
 
 
-def generar_horarios_para_fecha(fecha):
+def generar_horarios_para_fecha(fecha, intervalo_minutos=30):
     """
-    Genera horarios de 30 min según el día:
-    - Lunes a viernes: 07:00 a 14:00 y 15:00 a 18:00
-    - Sábado: 07:00 a 14:00
-    - Domingo: no hay servicio
+    Genera horarios disponibles según el día:
+    - Lunes a viernes: 07:00 a 20:00
+    - Sábado: 08:00 a 15:00
+    - Domingo: sin servicio
     """
     if fecha.weekday() == 6:
         return []
@@ -24,17 +24,15 @@ def generar_horarios_para_fecha(fecha):
     def agregar_bloque(hora_inicio, hora_fin):
         actual = datetime.combine(fecha, hora_inicio)
         fin = datetime.combine(fecha, hora_fin)
+        paso = timedelta(minutes=intervalo_minutos)
 
-        while actual < fin:
+        while actual <= fin:
             horarios.append(actual.strftime("%H:%M"))
-            actual += timedelta(minutes=30)
+            actual += paso
 
-    # Sábado
     if fecha.weekday() == 5:
-        agregar_bloque(time(7, 0), time(14, 0))
+        agregar_bloque(time(8, 0), time(15, 0))
     else:
-        # Lunes a viernes
-        agregar_bloque(time(7, 0), time(14, 0))
-        agregar_bloque(time(15, 0), time(18, 0))
+        agregar_bloque(time(7, 0), time(20, 0))
 
     return horarios
