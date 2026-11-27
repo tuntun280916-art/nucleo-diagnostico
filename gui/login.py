@@ -7,6 +7,23 @@ from gui.estilos import (
 )
 
 
+def formatear_error_pg(error):
+    pg_err = getattr(error, "pgerror", None)
+    if isinstance(pg_err, bytes):
+        return pg_err.decode("cp1252", errors="replace")
+    if isinstance(pg_err, str) and pg_err:
+        return pg_err
+    if getattr(error, "args", None):
+        partes = []
+        for arg in error.args:
+            if isinstance(arg, bytes):
+                partes.append(arg.decode("cp1252", errors="replace"))
+            else:
+                partes.append(str(arg))
+        return "\n".join(partes)
+    return repr(error)
+
+
 class Login:
 
     def mostrar_login(self):
@@ -187,9 +204,10 @@ class Login:
                 )
 
         except Exception as error:
+            detalle = formatear_error_pg(error)
             messagebox.showerror(
                 "Error de conexión",
-                f"No se pudo validar el acceso:\n\n{error}"
+                f"No se pudo validar el acceso:\n\n{detalle}"
             )
 
         finally:
