@@ -16,3 +16,5 @@ config_local.py
 # Archivos temporales
 *.log
 .DS_Store
+# Configuración de PyCharm
+.idea/

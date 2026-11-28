@@ -18,16 +18,7 @@ class RegistroPaciente:
         self.limpiar_contenedor()
         self.crear_barra_superior(self.main_container)
 
-        content = tk.Frame(
-            self.main_container,
-            bg=BG_COLOR
-        )
-        content.pack(
-            fill="both",
-            expand=True,
-            padx=60,
-            pady=35
-        )
+        content = self.crear_area_desplazable()
 
         tk.Button(
             content,
