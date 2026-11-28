@@ -721,7 +721,6 @@ class RegistroCita:
         # CONSULTAR DISPONIBILIDAD
         # MÉDICO Y PACIENTE
         # =========================================
-
         def actualizar_horarios(event=None):
 
             limpiar_agenda()
@@ -820,14 +819,29 @@ class RegistroCita:
             lbl_fecha.config(
                 text=fecha.strftime("%d/%m/%Y")
             )
-
+            
             # =====================================
             # CREAR BOTONES DE HORARIOS
             # =====================================
 
             for indice, hora in enumerate(horarios):
 
-                disponible = hora not in ocupadas
+                # Identificar horario de comida
+                bloqueado_comida = (
+                    fecha.weekday() != 5
+                    and hora in [
+                        "14:00",
+                        "14:30",
+                        "15:00",
+                        "15:30"
+                    ]
+                )
+
+                # Verificar disponibilidad
+                disponible = (
+                    hora not in ocupadas
+                    and not bloqueado_comida
+                )
 
                 boton = tk.Button(
                     frame_horarios,
@@ -837,25 +851,31 @@ class RegistroCita:
                     height=2,
                     relief="flat",
                     bd=0,
+
                     bg=(
                         "#dcfce7" if disponible
                         else "#fecaca"
                     ),
+
                     fg=(
                         "#166534" if disponible
                         else "#991b1b"
                     ),
+
                     disabledforeground="#991b1b",
                     activebackground="#2563eb",
                     activeforeground="white",
+
                     cursor=(
                         "hand2" if disponible
                         else "arrow"
                     ),
+
                     state=(
                         "normal" if disponible
                         else "disabled"
                     ),
+
                     command=lambda h=hora: seleccionar_hora(h)
                 )
 
@@ -871,7 +891,9 @@ class RegistroCita:
 
                     botones_horarios[hora] = boton
 
-            # Mostrar información de disponibilidad
+            # =====================================
+            # MOSTRAR INFORMACIÓN DE DISPONIBILIDAD
+            # =====================================
 
             mensajes = []
 
@@ -887,6 +909,13 @@ class RegistroCita:
                 mensajes.append(
                     "El paciente ya tiene citas a las: "
                     + ", ".join(sorted(ocupadas_paciente))
+                )
+
+            if fecha.weekday() != 5:
+
+                mensajes.append(
+                    "Horario de comida: 14:00 a 16:00 "
+                    "(No disponible para citas)"
                 )
 
             if mensajes:
